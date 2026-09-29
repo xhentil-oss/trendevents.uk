@@ -2,7 +2,8 @@
 // Our Services → Explore Venues → Event Types
 import { Link } from 'react-router-dom'
 import { ArrowRight, ChevronRight } from 'lucide-react'
-import { FEATURED_SERVICES, HERO_IMAGES, VENUES, img } from '../data'
+import { FEATURED_SERVICES, HERO_IMAGES, SERVICE_GROUPS, VENUES, img, slug } from '../data'
+import { SERVICE_PAGES, servicePath } from '../servicePages'
 import Icon from './Icon'
 import { VenueCarousel } from './Venues'
 import { EventTiles, Eyebrow, TextLink } from './Blocks'
@@ -16,7 +17,8 @@ const CARDS = CARD_ORDER.map((name) => FEATURED_SERVICES.find((s) => s.name === 
 
 const CELEBRATE = ['Weddings', 'Birthdays', 'Engagements', 'Corporate Events', 'Private Parties', 'Conferences']
 
-export function OurServicesSection() {
+// allLink: where "Explore All Services" goes (Home → the Services page, Services → its full list)
+export function OurServicesSection({ allLink = '/services#all-services' }) {
   return (
     <section className="section section--cream" id="our-services">
       <div className="container">
@@ -31,12 +33,12 @@ export function OurServicesSection() {
           </div>
           <div className="row-between__aside">
             <p>From creative planning to production, we provide full-service event solutions tailored to your style, budget and vision.</p>
-            <TextLink to="/services">Explore All Services</TextLink>
+            <TextLink to={allLink}>Explore All Services</TextLink>
           </div>
         </div>
         <div className="service-cards">
           {CARDS.map((s) => (
-            <Link key={s.name} to="/build" className="service-card">
+            <Link key={s.name} to={`/services/${slug(s.name)}`} className="service-card">
               <img src={img(s.image, 500)} alt="" loading="lazy" />
               <div className="service-card__body">
                 <Icon name={s.icon} size={18} strokeWidth={1.4} />
@@ -49,6 +51,41 @@ export function OurServicesSection() {
             </Link>
           ))}
         </div>
+      </div>
+    </section>
+  )
+}
+
+// Every service from the SERVICES menu, grouped — target of "Explore All Services"
+export function AllServicesSection() {
+  return (
+    <section className="section section--light" id="all-services">
+      <div className="container">
+        <Eyebrow>Full list</Eyebrow>
+        <h2 className="h2">All Services</h2>
+        {SERVICE_GROUPS.map((g) => (
+          <div key={g.name} className="all-services__group" id={slug(g.name)}>
+            <h3 className="all-services__title">{g.name}</h3>
+            <div className="all-services__grid">
+              {g.services.map((s) => {
+                const to = servicePath(s.name)
+                const page = SERVICE_PAGES[to.split('/').pop()]
+                return (
+                  <Link key={s.name} to={to} className="all-services__item">
+                    <img src={img(page ? page.gallery[0] : s.image, 400)} alt="" loading="lazy" />
+                    <span>
+                      <strong>
+                        <Icon name={s.icon} size={15} strokeWidth={1.5} /> {s.name}
+                      </strong>
+                      {s.text}
+                    </span>
+                    <ChevronRight size={16} className="all-services__chev" />
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   )

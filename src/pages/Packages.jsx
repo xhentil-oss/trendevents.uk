@@ -19,7 +19,7 @@ export default function Packages() {
           {PACKAGES.map((p) => (
             <article key={p.name} id={slug(p.name)} className={`package ${p.featured ? 'package--featured' : ''}`}>
               {p.featured && <span className="package__badge">Most popular</span>}
-              <img src={img(p.image, 700)} alt="" loading="lazy" />
+              <img src={img(p.image, 700)} alt="" loading="lazy" style={{ objectPosition: p.position }} />
               <div className="package__body">
                 <h3 className="h3">{p.name}</h3>
                 <p>{p.text}</p>

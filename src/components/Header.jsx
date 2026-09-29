@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ArrowRight, ChevronDown, Heart, Menu, Search, User, X } from 'lucide-react'
 import { EVENT_TYPES, PACKAGES, SERVICE_GROUPS, VENUE_CATEGORIES, slug } from '../data'
+import { servicePath } from '../servicePages'
 import { useStore } from '../store'
 import Logo from './Logo'
-import SearchBar from './SearchBar'
+import SiteSearch from './SiteSearch'
 
 const NAV = [
   { label: 'Home', to: '/' },
@@ -32,9 +33,9 @@ const NAV = [
     menu: {
       columns: SERVICE_GROUPS.map((g) => ({
         title: g.name,
-        items: g.services.map((s) => ({ label: s.name, to: `/services#${slug(g.name)}` })),
+        items: g.services.map((s) => ({ label: s.name, to: servicePath(s.name) })),
       })),
-      cta: { label: 'Explore All Services', to: '/services' },
+      cta: { label: 'Explore All Services', to: '/services#all-services' },
       wide: true,
     },
   },
@@ -57,7 +58,7 @@ function splitColumns(columns, n) {
   return Array.from({ length: n }, (_, i) => ({ items: items.slice(i * per, (i + 1) * per) }))
 }
 
-function Dropdown({ menu }) {
+function Dropdown({ menu, onPick }) {
   const cols = splitColumns(menu.columns, menu.split)
   return (
     <div className={`dropdown ${menu.wide ? 'dropdown--wide' : ''}`}>
@@ -66,14 +67,14 @@ function Dropdown({ menu }) {
           <div key={i} className="dropdown__col">
             {col.title && <p className="dropdown__title">{col.title}</p>}
             {col.items.map((it) => (
-              <Link key={it.label} to={it.to} className="dropdown__link">
+              <Link key={it.label} to={it.to} className="dropdown__link" onClick={onPick}>
                 {it.label}
               </Link>
             ))}
           </div>
         ))}
       </div>
-      <Link to={menu.cta.to} className="btn btn--gold btn--sm dropdown__cta">
+      <Link to={menu.cta.to} className="btn btn--gold btn--sm dropdown__cta" onClick={onPick}>
         {menu.cta.label} <ArrowRight size={14} />
       </Link>
     </div>
@@ -87,6 +88,8 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openSection, setOpenSection] = useState(null)
   const [searchOpen, setSearchOpen] = useState(false)
+  // Hides the hover dropdown after a click, until the mouse leaves that menu item
+  const [pickedMenu, setPickedMenu] = useState(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
@@ -110,12 +113,19 @@ export default function Header() {
 
         <nav className="nav" aria-label="Main">
           {NAV.map((item) => (
-            <div key={item.label} className={`nav__item ${item.menu ? 'has-menu' : ''}`}>
+            <div
+              key={item.label}
+              className={`nav__item ${item.menu ? 'has-menu' : ''} ${pickedMenu === item.label ? 'is-picked' : ''}`}
+              onMouseLeave={() => setPickedMenu(null)}
+            >
               <NavLink to={item.to} end={item.to === '/'} className="nav__link">
                 {item.label}
                 {item.menu && <ChevronDown size={12} className="nav__chev" />}
               </NavLink>
-              {item.menu && <Dropdown menu={item.menu} />}
+              {item.menu && <Dropdown menu={item.menu} onPick={() => {
+                    setPickedMenu(item.label)
+                    document.activeElement?.blur()
+                  }} />}
             </div>
           ))}
         </nav>
@@ -142,7 +152,7 @@ export default function Header() {
       {searchOpen && (
         <div className="header__search">
           <div className="container">
-            <SearchBar />
+            <SiteSearch />
           </div>
         </div>
       )}

@@ -18,7 +18,7 @@ export const HERO_IMAGES = {
   about: '/images/decor-event.avif',
   quote: '1522413452208-996ff3f3e740',
   build: '/images/cover-trendevent.jpg',
-  cta: '1464047736614-af63643285bf',
+  cta: '/images/cta-candles.jpg',
 }
 
 // Search bar "Event Type" dropdown
@@ -207,7 +207,7 @@ export const FEATURED_SERVICES = [
   { name: 'DJ & Entertainment', icon: 'Headphones', image: '/images/services/dj.jpg', text: 'Music and entertainment for every vibe' },
   { name: 'Sound & Lighting', icon: 'Speaker', image: '/images/services/sound-lighting.jpg', text: 'Professional audio and lighting production' },
   { name: 'LED Screens', icon: 'Monitor', image: '/images/services/led-screens.jpg', text: 'Stunning visuals for bigger impact' },
-  { name: 'Stages', icon: 'Theater', image: '/images/services/stages.jpg', text: 'Custom stage solutions' },
+  { name: 'Stages', icon: 'Theater', image: '/images/services/stage-decor.jpg', text: 'Decorated stages & backdrops' },
   { name: 'Special Effects', icon: 'WandSparkles', image: '/images/services/special-effects.jpg', text: 'Create unforgettable moments' },
 ]
 
@@ -305,14 +305,15 @@ export const VENUES = [
 export const PACKAGES = [
   {
     name: 'Wedding Packages',
-    image: '1606216794074-735e91aa2c92',
+    image: '/images/event-wedding.jpg',
     from: 8500,
     text: 'Everything for your big day, from venue to the final dance.',
     includes: ['Venue sourcing', 'Full planning & coordination', 'Floral & décor styling', 'Catering', 'Photography'],
   },
   {
     name: 'Birthday Packages',
-    image: '1530103862676-de8c9debad1d',
+    image: '/images/event-birthday.jpg',
+    position: 'center 62%',
     from: 1500,
     text: 'Milestone birthdays with styling, cake and entertainment.',
     includes: ['Venue', 'Themed decoration', 'Cake & desserts', 'DJ'],
@@ -355,19 +356,22 @@ export const PACKAGES = [
   },
 ]
 
+// Our Work gallery — each category uses its photo from the Events page (EVENT_TYPES)
+const eventImage = (type) => EVENT_TYPES.find((e) => e.name === type).image
+
 export const PORTFOLIO = [
-  { title: 'A White Rose Reception', type: 'Weddings', image: '/images/event-wedding.jpg' },
-  { title: 'Sunset Garden Ceremony', type: 'Weddings', image: '1469371670807-013ccf25f16a' },
-  { title: 'Tech Summit 2026', type: 'Conferences', image: '1540575467063-178a50c2df87' },
-  { title: 'A Blush Balloon Birthday', type: 'Birthdays', image: '/images/event-birthday.jpg' },
-  { title: 'The Grand Reveal', type: 'Product Launches', image: '/images/event-product-launch.jpg' },
-  { title: 'Rooftop Engagement', type: 'Engagements', image: '1515934751635-c81c6bc9a2d8' },
-  { title: 'Red Carpet Awards Gala', type: 'Award Nights', image: '/images/event-award-night.jpg' },
-  { title: 'Long-Table Supper Club', type: 'Private Parties', image: '1519225421980-715cb0215aed' },
-  { title: 'Festive Team Celebration', type: 'Christmas Parties', image: '/images/event-christmas-party.jpg' },
-  { title: 'Seaside Vows', type: 'Weddings', image: '1544078751-58fee2d8a03b' },
-  { title: 'Brand Experience Night', type: 'Brand Events', image: '1566737236500-c8ac43014a67' },
-  { title: 'Sweet Baby Shower', type: 'Baby Showers', image: '1535254973040-607b474cb50d' },
+  { title: 'A White Rose Reception', type: 'Weddings', image: eventImage('Weddings') },
+  { title: 'Candlelight by the River', type: 'Weddings', image: '/images/cover-trendevent.jpg' },
+  { title: 'Tech Summit 2026', type: 'Conferences', image: eventImage('Conferences') },
+  { title: 'Sunset Floral Birthday', type: 'Birthdays', image: eventImage('Birthdays') },
+  { title: 'The Grand Reveal', type: 'Product Launches', image: eventImage('Product Launches') },
+  { title: 'A Champagne Engagement', type: 'Engagements', image: eventImage('Engagements') },
+  { title: 'Red Carpet Awards Gala', type: 'Award Nights', image: eventImage('Award Nights') },
+  { title: 'Poolside Summer Party', type: 'Private Parties', image: eventImage('Private Parties') },
+  { title: 'Festive Team Celebration', type: 'Christmas Parties', image: eventImage('Christmas Parties') },
+  { title: 'Orchids & Champagne Reception', type: 'Weddings', image: '/images/decor-event.avif' },
+  { title: 'Garden Brand Soirée', type: 'Brand Events', image: eventImage('Brand Events') },
+  { title: 'Sunset Baby Shower', type: 'Baby Showers', image: eventImage('Baby Showers') },
 ]
 
 export const PROCESS = [
@@ -378,7 +382,8 @@ export const PROCESS = [
 ]
 
 export const CONTACT = {
-  phone: '+44 20 0000 0000',
-  email: 'hello@trendevents.com',
+  phone: '+44 7308 214398',
+  email: 'Trendeventsuk@gmail.com',
   address: 'London, United Kingdom',
+  instagram: 'https://www.instagram.com/trendevents.uk/',
 }

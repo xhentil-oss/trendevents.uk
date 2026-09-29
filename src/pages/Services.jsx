@@ -1,8 +1,9 @@
+import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { HERO_IMAGES } from '../data'
 import SearchBar from '../components/SearchBar'
 import { CtaBanner, PageHero } from '../components/Blocks'
-import { EventTypesSection, OurServicesSection, VenuesSection } from '../components/Sections'
+import { AllServicesSection, EventTypesSection, OurServicesSection, VenuesSection } from '../components/Sections'
 
 export default function Services() {
   return (
@@ -14,9 +15,9 @@ export default function Services() {
         italic="One Team."
         text="From concept and planning to the final moment — we provide everything your event needs."
       >
-        <a href="#our-services" className="btn btn--gold">
+        <Link to="/services#all-services" className="btn btn--gold">
           Explore Our Services <ArrowRight size={16} />
-        </a>
+        </Link>
       </PageHero>
 
       <div className="overlap-band">
@@ -26,6 +27,7 @@ export default function Services() {
       </div>
 
       <OurServicesSection />
+      <AllServicesSection />
       <VenuesSection />
       <EventTypesSection />
       <CtaBanner />

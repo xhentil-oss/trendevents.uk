@@ -12,9 +12,9 @@ export default function Footer() {
           <Logo />
           <p className="footer__tag">We create. You celebrate. From the perfect venue to the final light.</p>
           <div className="footer__social">
-            <a href="#" aria-label="Instagram"><SocialIcons.Instagram /></a>
-            <a href="#" aria-label="Facebook"><SocialIcons.Facebook /></a>
-            <a href="#" aria-label="TikTok"><SocialIcons.TikTok /></a>
+            <a href={CONTACT.instagram} target="_blank" rel="noopener noreferrer" aria-label="Trend Events on Instagram">
+              <SocialIcons.Instagram />
+            </a>
           </div>
         </div>
         <div>

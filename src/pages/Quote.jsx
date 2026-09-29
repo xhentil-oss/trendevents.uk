@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ArrowRight, CalendarDays, CircleCheck, Mail, MapPin, Phone } from 'lucide-react'
-import { CONTACT, GUEST_OPTIONS, HERO_IMAGES, PACKAGES, SEARCH_EVENT_TYPES, VENUES, slug } from '../data'
+import { CONTACT, FEATURED_SERVICES, GUEST_OPTIONS, HERO_IMAGES, PACKAGES, SEARCH_EVENT_TYPES, VENUES, slug } from '../data'
 import { useStore } from '../store'
 import { Eyebrow, PageHero } from '../components/Blocks'
+import { SocialIcons } from '../components/Icon'
 
 export default function Quote() {
   const [params] = useSearchParams()
@@ -12,6 +13,7 @@ export default function Quote() {
   const isConsultation = request === 'consultation'
   const venue = VENUES.find((v) => v.id === (params.get('venue') || plan.venueId))
   const pkg = PACKAGES.find((p) => slug(p.name) === params.get('package'))
+  const service = FEATURED_SERVICES.find((s) => slug(s.name) === params.get('service'))
   const [sent, setSent] = useState(false)
 
   const [form, setForm] = useState({
@@ -55,10 +57,11 @@ export default function Quote() {
             </div>
           ) : (
             <form className="card quote__form" onSubmit={submit}>
-              {(venue || pkg || plan.services.length > 0) && (
+              {(venue || pkg || service || plan.services.length > 0) && (
                 <div className="quote__context">
                   {venue && <p><strong>Venue:</strong> {venue.name}, {venue.location}</p>}
                   {pkg && <p><strong>Package:</strong> {pkg.name}</p>}
+                  {service && <p><strong>Service:</strong> {service.name}</p>}
                   {plan.services.length > 0 && <p><strong>Services:</strong> {plan.services.join(', ')}</p>}
                 </div>
               )}
@@ -111,6 +114,7 @@ export default function Quote() {
             <p>Meet one of our planners in person or online — free and with no obligation.</p>
             <a href={`tel:${CONTACT.phone.replace(/\s/g, '')}`}><Phone size={16} /> {CONTACT.phone}</a>
             <a href={`mailto:${CONTACT.email}`}><Mail size={16} /> {CONTACT.email}</a>
+            <a href={CONTACT.instagram} target="_blank" rel="noopener noreferrer"><SocialIcons.Instagram width="16" height="16" /> @trendevents.uk</a>
             <span><MapPin size={16} /> {CONTACT.address}</span>
             <span><CalendarDays size={16} /> Mon–Sat, 9:00–19:00</span>
           </aside>

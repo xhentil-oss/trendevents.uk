@@ -7,7 +7,7 @@ export default function Home() {
     <>
       <section className="hero hero--glam">
         {/* Cover photo lives in public/images — replace the file to change it */}
-        <div className="hero__bg" style={{ backgroundImage: 'url(/images/cover-trendevent.jpg)' }} />
+        <div className="hero__bg" style={{ backgroundImage: 'url(/images/cover-trendevent1.jpg)' }} />
         <div className="container hero__inner">
           <Eyebrow light>Trend Events</Eyebrow>
           <h1 className="display display--xl">
@@ -22,7 +22,7 @@ export default function Home() {
         </div>
       </section>
 
-      <OurServicesSection />
+      <OurServicesSection allLink="/services" />
       <VenuesSection />
       <EventTypesSection />
       <CtaBanner />
