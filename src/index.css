@@ -2434,3 +2434,48 @@ p {
   width: 96px;
   height: 70px;
 }
+
+/* ---------- Form feedback ---------- */
+
+.field-error {
+  font-size: 12px;
+  font-weight: 400;
+  color: #b0443b;
+}
+
+[aria-invalid='true'] {
+  border-color: #b0443b !important;
+}
+
+.form-error {
+  width: 100%;
+  margin: 0;
+  padding: 12px 16px;
+  border-left: 3px solid #b0443b;
+  background: #fbeeec;
+  color: #7d2e27;
+  font-size: 14px;
+}
+
+.form-success {
+  width: 100%;
+  margin: 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--gold);
+  background: var(--cream);
+  font-size: 14px;
+}
+
+.btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+/* Honeypot field — kept off-screen, not display:none, so bots still see it */
+.hp {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

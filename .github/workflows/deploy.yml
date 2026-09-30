@@ -1,0 +1,59 @@
+# On every push to main: build the site and publish the ready-to-serve files
+# (site + PHP API + .cpanel.yml) to the "deploy" branch.
+# cPanel → Git™ Version Control tracks that branch; "Update from Remote" +
+# "Deploy HEAD Commit" then copies it into public_html (see .cpanel.yml below).
+name: Build for cPanel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write # needed to push the deploy branch
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # out/site/  = exactly what goes into public_html
+      # out/.cpanel.yml = the copy instructions cPanel runs on "Deploy HEAD Commit"
+      # api/config.php is not in git (DB password) and is never part of the copy,
+      # so the one on the server is left untouched.
+      - name: Assemble deploy branch
+        run: |
+          mkdir -p out/site/api
+          cp -r dist/. out/site/
+          cp api/index.php api/lib.php api/.htaccess out/site/api/
+          cat > out/.cpanel.yml <<'EOF'
+          ---
+          deployment:
+            tasks:
+              - export DEPLOYPATH=/home/trendevents/public_html/
+              - /bin/cp -R site/. $DEPLOYPATH
+          EOF
+          echo "Built from ${GITHUB_SHA::7} on $(date -u '+%Y-%m-%d %H:%M UTC')" > out/site/version.txt
+
+      - name: Publish to the deploy branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: deploy
+          publish_dir: ./out
+          force_orphan: true # keep only the latest build, no history bloat
+          enable_jekyll: true # don't add a .nojekyll file
+          commit_message: 'Deploy ${{ github.sha }}'

@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# API secrets (use api/config.example.php as the template)
+api/config.php
+deploy/
