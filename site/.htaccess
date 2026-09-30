@@ -1,0 +1,34 @@
+# Trend Events — Apache settings for cPanel hosting (copied into dist/ on build)
+
+# Force HTTPS — also correct behind Cloudflare (www.trendevents.uk is proxied),
+# where the visitor's HTTPS arrives as X-Forwarded-Proto; without this check
+# Cloudflare's "Flexible" SSL mode would loop forever
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# React Router: send every URL that is not a real file to index.html,
+# so pages like /services/catering work on refresh and direct links
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+
+# Cache images, fonts and hashed JS/CSS for a year; always recheck index.html
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/avif "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# Compress text files
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript image/svg+xml
+</IfModule>
+
+AddType image/avif .avif
