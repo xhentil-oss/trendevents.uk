@@ -54,6 +54,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: deploy
           publish_dir: ./out
-          force_orphan: true # keep only the latest build, no history bloat
+          # Each build is added ON TOP of the previous one: cPanel's "Update from Remote"
+          # only accepts fast-forward updates, so the branch must never be replaced
+          force_orphan: false
+          keep_files: false
           enable_jekyll: true # don't add a .nojekyll file
           commit_message: 'Deploy ${{ github.sha }}'
