@@ -63,6 +63,10 @@ try {
             register();
         case 'POST login':
             login();
+        case 'POST forgot-password':
+            forgot_password();
+        case 'POST reset-password':
+            reset_password();
         case 'POST logout':
             start_session();
             session_destroy();
@@ -443,4 +447,99 @@ function saved_remove(?string $venue): void
     if (!$id) fail(422, 'Unknown venue');
     run("DELETE FROM saved_venues WHERE $where AND venue_id = ?", [$owner, $id]);
     send(200, ['ok' => true]);
+}
+
+// ======================================================================
+//  PASSWORD RESET
+// ======================================================================
+
+// Created on first use, so an already-imported database needs no manual change
+function ensure_reset_table(): void
+{
+    db()->exec(
+        'CREATE TABLE IF NOT EXISTS password_resets (
+           id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+           user_id    INT UNSIGNED NOT NULL,
+           token_hash CHAR(64) NOT NULL,
+           expires_at DATETIME NOT NULL,
+           used_at    DATETIME NULL,
+           ip_address VARCHAR(45) NULL,
+           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+           PRIMARY KEY (id),
+           UNIQUE KEY uq_pr_token (token_hash),
+           KEY idx_pr_user (user_id, created_at),
+           CONSTRAINT fk_pr_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+}
+
+// POST /api/forgot-password { email } — always answers the same way, so it can't be used
+// to find out which emails have an account
+function forgot_password(): void
+{
+    $email = str(body()['email'] ?? null, 190);
+    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) fail(422, 'Please enter a valid email address', ['email' => 'Please enter a valid email address']);
+    $done = ['ok' => true, 'message' => 'If an account exists for this email, we have sent a link to reset the password.'];
+
+    ensure_reset_table();
+    $user = one('SELECT id, full_name, email FROM users WHERE email = ? AND is_active = 1', [$email]);
+    if (!$user) {
+        usleep(400000);
+        send(200, $done);
+    }
+    // Max 3 emails per account per hour
+    $recent = one('SELECT COUNT(*) n FROM password_resets WHERE user_id = ? AND created_at > (NOW() - INTERVAL 1 HOUR)', [$user['id']]);
+    if ((int) $recent['n'] >= 3) send(200, $done);
+
+    $token = bin2hex(random_bytes(32));
+    run(
+        'INSERT INTO password_resets (user_id, token_hash, expires_at, ip_address) VALUES (?, ?, NOW() + INTERVAL 1 HOUR, ?)',
+        [$user['id'], hash('sha256', $token), client_ip()]
+    );
+    $url = rtrim(cfg('SITE_URL', 'https://trendevents.uk'), '/') . '/reset-password?token=' . $token;
+    $first = explode(' ', $user['full_name'])[0];
+    $text = "Hi $first,\n\nWe received a request to reset the password for your Trend Events account.\n\n"
+        . "Choose a new password here (the link works for 1 hour):\n$url\n\n"
+        . "If you didn't ask for this, you can ignore this email — your password stays the same.\n\nTrend Events";
+    $html = email_html(
+        "Reset your password",
+        "Hi $first, we received a request to reset the password for your Trend Events account. The link below works for 1 hour.",
+        'Choose a new password',
+        $url,
+        "If you didn't ask for this, you can ignore this email — your password stays the same. If the button doesn't work, copy this link into your browser:"
+    );
+    if (!send_mail($user['email'], 'Reset your Trend Events password', $text, $html)) {
+        fail(500, 'We could not send the email right now. Please try again later or contact us.');
+    }
+    send(200, $done);
+}
+
+// POST /api/reset-password { token, password } — sets the new password and signs the user in
+function reset_password(): void
+{
+    $b = body();
+    $token = (string) ($b['token'] ?? '');
+    $password = (string) ($b['password'] ?? '');
+    if (!preg_match('/^[a-f0-9]{64}$/', $token)) fail(400, 'This reset link is not valid. Please request a new one.');
+    if (strlen($password) < 8) fail(422, 'Password must be at least 8 characters', ['password' => 'Password must be at least 8 characters']);
+
+    ensure_reset_table();
+    $row = one(
+        'SELECT id, user_id FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > NOW()',
+        [hash('sha256', $token)]
+    );
+    if (!$row) fail(400, 'This reset link has expired or was already used. Please request a new one.');
+
+    $pdo = db();
+    $pdo->beginTransaction();
+    run('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $row['user_id']]);
+    // Every outstanding link for this account stops working
+    run('UPDATE password_resets SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL', [$row['user_id']]);
+    $pdo->commit();
+
+    start_session();
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = (int) $row['user_id'];
+    adopt_device_saves((int) $row['user_id']);
+    send(200, ['ok' => true, 'user' => public_user((int) $row['user_id'])]);
 }

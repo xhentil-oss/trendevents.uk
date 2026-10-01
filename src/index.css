@@ -2479,3 +2479,199 @@ p {
   height: 1px;
   overflow: hidden;
 }
+
+/* ---------- Compact search box on phones ----------
+   Row 1: event type · Row 2: location | date · Row 3: guests | button */
+@media (max-width: 760px) {
+  .search {
+    /* minmax(0, …) lets the columns shrink below the date input's natural width */
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0;
+    padding: 6px;
+    border-radius: 8px;
+  }
+  .search__field {
+    gap: 8px;
+    padding: 9px 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .search__field:first-child {
+    grid-column: 1 / -1;
+  }
+  .search__field:nth-child(2),
+  .search__field:nth-child(4) {
+    border-right: 1px solid var(--line);
+  }
+  .search__field:nth-child(4) {
+    border-bottom: 0;
+  }
+  .search__icon {
+    width: 16px;
+    height: 16px;
+  }
+  .search__label {
+    font-size: 10px;
+    letter-spacing: 0.02em;
+  }
+  .search__select select,
+  .search__date {
+    font-size: 13px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+  }
+  .search__date {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .search__body {
+    overflow: hidden;
+  }
+  .search__btn {
+    grid-column: auto;
+    min-width: 0;
+    margin: 6px 0 0 6px;
+    height: auto;
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    white-space: normal;
+    line-height: 1.2;
+    align-self: stretch;
+  }
+  .hero__text {
+    margin: 16px 0 26px;
+    font-size: 16px;
+  }
+}
+
+/* ---------- Larger, easier-to-read supporting text ---------- */
+
+.row-between__aside p,
+.split__intro p,
+.cta-banner p:not(.eyebrow) {
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.service-card p {
+  font-size: 14px;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+.service-card h3 {
+  font-size: 21px;
+}
+
+.all-services__item span {
+  font-size: 14px;
+}
+
+.venue-card .meta,
+.venue-card__price {
+  font-size: 14px;
+}
+
+@media (max-width: 760px) {
+  body {
+    font-size: 15.5px;
+  }
+  .row-between__aside p,
+  .split__intro p,
+  .cta-banner p:not(.eyebrow) {
+    font-size: 16px;
+  }
+  .service-card p {
+    font-size: 13.5px;
+  }
+  .service-card h3 {
+    font-size: 19px;
+  }
+}
+
+/* Larger filter chips, selects and result count (Venues, Our Work) */
+.chip {
+  padding: 10px 20px;
+  font-size: 15px;
+}
+
+.filters select {
+  font-size: 15px;
+  padding: 13px 16px;
+}
+
+.filters__count {
+  font-size: 15px;
+}
+
+@media (max-width: 760px) {
+  .chip {
+    padding: 9px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Service cards: same height in a row, arrow pinned to the bottom-right corner */
+.service-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.service-card__body {
+  flex: 1;
+  align-content: start;
+  padding-right: 38px;
+  padding-bottom: 22px;
+}
+
+.service-card__chev {
+  position: absolute;
+  right: 14px;
+  bottom: 16px;
+}
+
+/* CTA banner: keep vertical breathing room on phones
+   (the mobile .container rule was resetting its top/bottom padding to 0) */
+@media (max-width: 760px) {
+  .cta-banner .cta-banner__inner {
+    padding: 48px 16px 52px;
+    gap: 24px;
+  }
+}
+
+.saved-hint {
+  margin: 0 0 24px;
+}
+
+.saved-hint a {
+  color: var(--gold-dark);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+/* ---------- Account: links & forgot password ---------- */
+.auth__intro {
+  margin: 6px 0 0;
+}
+
+.auth__link {
+  align-self: flex-end;
+  margin-top: -6px;
+  font-size: 13px;
+  color: var(--gold-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth__link--center {
+  align-self: center;
+  margin-top: 0;
+}
+
+.form-error a {
+  color: inherit;
+  font-weight: 500;
+}

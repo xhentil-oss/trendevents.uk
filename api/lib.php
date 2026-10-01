@@ -128,9 +128,127 @@ function notify(string $subject, array $lines): void
 {
     if (NOTIFY_EMAIL === '') return;
     $text = implode("\n", array_map(fn ($k, $v) => "$k: $v", array_keys($lines), $lines));
-    $headers = 'From: Trend Events <' . MAIL_FROM . ">\r\nContent-Type: text/plain; charset=UTF-8";
-    if (!empty($lines['Email'])) $headers .= "\r\nReply-To: " . $lines['Email'];
-    @mail(NOTIFY_EMAIL, '=?UTF-8?B?' . base64_encode($subject) . '?=', $text, $headers);
+    send_mail(NOTIFY_EMAIL, $subject, $text, null, $lines['Email'] ?? null);
+}
+
+// ---------- email ----------
+
+// Settings added after the first release: defaults keep an older config.php working
+function cfg(string $name, $default)
+{
+    return defined($name) ? constant($name) : $default;
+}
+
+// Sends through SMTP when SMTP_PASS is set in config.php, otherwise falls back to PHP mail()
+function send_mail(string $to, string $subject, string $text, ?string $html = null, ?string $replyTo = null): bool
+{
+    $boundary = 'b' . bin2hex(random_bytes(12));
+    $from = MAIL_FROM;
+    $headers = [
+        'Date: ' . date('r'),
+        'From: Trend Events <' . $from . '>',
+        'To: <' . $to . '>',
+        'Subject: =?UTF-8?B?' . base64_encode($subject) . '?=',
+        'Message-ID: <' . bin2hex(random_bytes(16)) . '@' . substr(strrchr($from, '@'), 1) . '>',
+        'MIME-Version: 1.0',
+    ];
+    if ($replyTo && filter_var($replyTo, FILTER_VALIDATE_EMAIL)) $headers[] = 'Reply-To: <' . $replyTo . '>';
+
+    if ($html === null) {
+        $headers[] = 'Content-Type: text/plain; charset=UTF-8';
+        $headers[] = 'Content-Transfer-Encoding: base64';
+        $body = chunk_split(base64_encode($text));
+    } else {
+        $headers[] = 'Content-Type: multipart/alternative; boundary="' . $boundary . '"';
+        $body = "--$boundary\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+            . chunk_split(base64_encode($text))
+            . "--$boundary\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n"
+            . chunk_split(base64_encode($html))
+            . "--$boundary--\r\n";
+    }
+
+    if (cfg('SMTP_PASS', '') === '') {
+        // mail() takes To and Subject separately
+        $extra = array_filter($headers, fn ($h) => !preg_match('/^(To|Subject):/', $h));
+        return @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $body, implode("\r\n", $extra));
+    }
+
+    try {
+        smtp_send($to, implode("\r\n", $headers) . "\r\n\r\n" . $body);
+        return true;
+    } catch (Throwable $e) {
+        error_log('Trend API mail error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+// Minimal SMTP client: port 465 = SSL, 587 = STARTTLS, anything else = plain (local testing)
+function smtp_send(string $to, string $message): void
+{
+    $host = cfg('SMTP_HOST', 'mail.trendevents.uk');
+    $port = (int) cfg('SMTP_PORT', 465);
+    $ctx = stream_context_create(['ssl' => [
+        'verify_peer' => cfg('SMTP_VERIFY_SSL', true),
+        'verify_peer_name' => cfg('SMTP_VERIFY_SSL', true),
+        'peer_name' => $host,
+    ]]);
+    $scheme = $port === 465 ? 'ssl' : 'tcp';
+    $fp = @stream_socket_client("$scheme://$host:$port", $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $ctx);
+    if (!$fp) throw new RuntimeException("SMTP connect failed: $errstr ($errno)");
+    stream_set_timeout($fp, 20);
+
+    $read = function () use ($fp): string {
+        $out = '';
+        while (($line = fgets($fp, 1024)) !== false) {
+            $out .= $line;
+            if (strlen($line) < 4 || $line[3] === ' ') break; // last line of a (multi-line) reply
+        }
+        return $out;
+    };
+    $cmd = function (?string $line, array $expect) use ($fp, $read): string {
+        if ($line !== null) fwrite($fp, $line . "\r\n");
+        $reply = $read();
+        if (!in_array((int) substr($reply, 0, 3), $expect, true)) {
+            throw new RuntimeException('SMTP error after "' . explode(' ', (string) $line)[0] . '": ' . trim($reply));
+        }
+        return $reply;
+    };
+
+    $hostname = $_SERVER['SERVER_NAME'] ?? 'trendevents.uk';
+    $cmd(null, [220]);
+    $cmd("EHLO $hostname", [250]);
+    if ($port === 587) {
+        $cmd('STARTTLS', [220]);
+        if (!stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) throw new RuntimeException('STARTTLS failed');
+        $cmd("EHLO $hostname", [250]);
+    }
+    $cmd('AUTH LOGIN', [334]);
+    $cmd(base64_encode(cfg('SMTP_USER', MAIL_FROM)), [334]);
+    $cmd(base64_encode(cfg('SMTP_PASS', '')), [235]);
+    $cmd('MAIL FROM:<' . MAIL_FROM . '>', [250]);
+    $cmd('RCPT TO:<' . $to . '>', [250, 251]);
+    $cmd('DATA', [354]);
+    // Dot-stuffing: a line starting with "." must be sent as ".."
+    $data = preg_replace('/^\./m', '..', str_replace(["\r\n", "\n"], ["\n", "\r\n"], $message));
+    $cmd($data . "\r\n.", [250]);
+    fwrite($fp, "QUIT\r\n");
+    fclose($fp);
+}
+
+// Simple branded HTML email with one button
+function email_html(string $title, string $intro, string $buttonText, string $url, string $footer): string
+{
+    $e = fn ($s) => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+    return '<!doctype html><html><body style="margin:0;background:#f6f1ea;font-family:Helvetica,Arial,sans-serif;color:#1d1915">'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 12px"><tr><td align="center">'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:8px;overflow:hidden">'
+        . '<tr><td style="background:#0f0d0b;padding:22px 28px;color:#c9a566;font-family:Georgia,serif;font-size:22px;letter-spacing:3px">TREND EVENTS</td></tr>'
+        . '<tr><td style="padding:32px 28px">'
+        . '<h1 style="margin:0 0 14px;font-family:Georgia,serif;font-weight:normal;font-size:26px">' . $e($title) . '</h1>'
+        . '<p style="margin:0 0 26px;font-size:15px;line-height:1.6;color:#5b544c">' . $e($intro) . '</p>'
+        . '<a href="' . $e($url) . '" style="display:inline-block;background:#bf9a5e;color:#ffffff;text-decoration:none;padding:14px 26px;border-radius:3px;font-size:13px;letter-spacing:2px;text-transform:uppercase">' . $e($buttonText) . '</a>'
+        . '<p style="margin:26px 0 0;font-size:12px;line-height:1.6;color:#8a8279">' . $e($footer) . '<br><a href="' . $e($url) . '" style="color:#a8834a;word-break:break-all">' . $e($url) . '</a></p>'
+        . '</td></tr></table></td></tr></table></body></html>';
 }
 
 // Saves a quote request and emails the team; returns the new id

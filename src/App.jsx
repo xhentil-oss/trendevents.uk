@@ -13,7 +13,7 @@ import OurWork from './pages/OurWork'
 import About from './pages/About'
 import Build from './pages/Build'
 import Quote from './pages/Quote'
-import { Account, Saved } from './pages/Misc'
+import { Account, ResetPassword, Saved } from './pages/Misc'
 import NotFound from './pages/NotFound'
 import SearchResults from './pages/SearchResults'
 
@@ -61,6 +61,7 @@ export default function App() {
           <Route path="/quote" element={<Quote />} />
           <Route path="/saved" element={<Saved />} />
           <Route path="/account" element={<Account />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

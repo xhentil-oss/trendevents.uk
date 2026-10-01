@@ -16,6 +16,17 @@ const NOTIFY_EMAIL = 'Trendeventsuk@gmail.com';
 // Sender address for those emails — use an address on your own domain, e.g. no-reply@trendevents.uk
 const MAIL_FROM = 'no-reply@trendevents.uk';
 
+// Outgoing mail server (cPanel → Email Accounts → no-reply → Connect Devices).
+// Leave SMTP_PASS empty to fall back to PHP mail().
+const SMTP_HOST = 'mail.trendevents.uk';
+const SMTP_PORT = 465;                       // 465 = SSL, 587 = STARTTLS
+const SMTP_USER = 'no-reply@trendevents.uk';
+const SMTP_PASS = '';                        // password of the no-reply email account
+const SMTP_VERIFY_SSL = true;                // set false only if the mail server's certificate doesn't match SMTP_HOST
+
+// Public address of the site — used in password reset links
+const SITE_URL = 'https://trendevents.uk';
+
 // Extra origins allowed to call the API (the live site itself never needs this).
 // Keep the Vite dev server here while developing; remove it once the site is live.
 const ALLOWED_ORIGINS = ['http://localhost:5173'];

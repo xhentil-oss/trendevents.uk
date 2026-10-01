@@ -32,6 +32,8 @@
    | `MAIL_FROM` | an address **on your domain**, e.g. `no-reply@trendevents.uk` (Gmail rejects mail "from" other domains) |
    | `ALLOWED_ORIGINS` | remove `http://localhost:5173` once live |
    | `DEBUG` | keep `false` |
+| `SMTP_PASS` | password of the `no-reply@trendevents.uk` email account (enables SMTP via `mail.trendevents.uk:465`; empty = PHP `mail()`) |
+| `SITE_URL` | `https://trendevents.uk` (used in reset links) |
 
 5. **PHP version** — cPanel → **MultiPHP Manager** → PHP **8.0 or newer** (8.2+ recommended).
 6. **Test** — open `https://yourdomain/api/` → `{"name":"Trend Events API","status":"ok"}`, then `https://yourdomain/api/services` → a list of 22 services.
@@ -92,6 +94,8 @@ Every request is emailed to `NOTIFY_EMAIL`. Spam protection: a hidden `website` 
 | `POST /api/login` | `email`, `password` |
 | `POST /api/logout` | — |
 | `GET /api/me` | returns `{"user": …}` or `{"user": null}` |
+| `POST /api/forgot-password` | `email` — emails a reset link valid 1 hour (max 3 per hour; same answer whether or not the email exists) |
+| `POST /api/reset-password` | `token` (from the link), `password` — sets it, signs the user in, invalidates all other links |
 
 Passwords are stored with `password_hash()` and checked with `password_verify()`. Call the API with `credentials: 'include'` in `fetch` so the session cookie is sent.
 
@@ -122,9 +126,12 @@ New requests can be read in phpMyAdmin → `quote_requests` (newest first: sort 
 | Get a Quote (`/quote`, incl. from packages, services, consultation) | `POST /api/quote` |
 | Check Availability (venue page → `/quote?request=availability`) | `POST /api/availability` |
 | Build Your Event → Get a Quote (`/quote?from=build`) | `POST /api/build` |
-| Account (sign in / create account / sign out) | `POST /api/login`, `/register`, `/logout`, `GET /api/me` |
+| Account (sign in / create account / sign out / forgot password), `/reset-password` page | `POST /api/login`, `/register`, `/logout`, `GET /api/me` |
+| Saved venues ♡ (header count, Saved page, hearts on venue cards) | `GET/POST /api/saved`, `DELETE /api/saved/{slug}` |
 
-Still using the built-in data (no API call): venue/service/package lists, Saved venues (kept in the browser).
+Still using the built-in data (no API call): venue/service/package lists.
+
+Saved venues: guests are identified by a random `X-Device-Token` (stored in the browser as `trend:device`); signing in moves that device's saves into the account, so the list follows the user to any device.
 
 **Local development:** the Vite dev server has no PHP, so forms show "We could not reach the server". To test against the live API run:
 `API_PROXY=https://trendevents.uk npm run dev` (in PowerShell: `$env:API_PROXY="https://trendevents.uk"; npm run dev`).

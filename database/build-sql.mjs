@@ -156,7 +156,7 @@ sql(`-- =====================================================================
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS event_build_services, event_builds, quote_requests, saved_venues, users,
+DROP TABLE IF EXISTS password_resets, event_build_services, event_builds, quote_requests, saved_venues, users,
   portfolio_images, portfolio_items, package_items, packages, venue_images, venue_category_map,
   venues, venue_categories, service_images, service_features, services, service_categories,
   event_type_features, event_types, guest_ranges, cities, site_settings;
@@ -440,6 +440,21 @@ CREATE TABLE users (
   updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_users_email (email)
+) ${T}
+
+-- Password reset links (token stored as SHA-256 hash, valid 1 hour)
+CREATE TABLE password_resets (
+  id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id    INT UNSIGNED NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  used_at    DATETIME NULL,
+  ip_address VARCHAR(45) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_pr_token (token_hash),
+  KEY idx_pr_user (user_id, created_at),
+  CONSTRAINT fk_pr_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ${T}
 
 -- 11. SAVED VENUES (♡) — user_id for members, device_token for guests
