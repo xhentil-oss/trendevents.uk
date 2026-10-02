@@ -132,7 +132,7 @@ function notify(string $subject, array $lines): void
 }
 
 // The team's copy of a request: every form field in a table, plus reply / call buttons
-function request_email_html(string $subject, array $lines): string
+function request_email_html(string $subject, array $lines, bool $forTeam = true): string
 {
     $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
     $message = $lines['Message'] ?? null;
@@ -154,15 +154,15 @@ function request_email_html(string $subject, array $lines): string
     }
 
     $messageBlock = $message
-        ? '<p style="margin:26px 0 8px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8a8279">Tell us about your event</p>'
+        ? '<p style="margin:26px 0 8px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8a8279">' . ($forTeam ? 'Tell us about your event' : 'Your message') . '</p>'
           . '<div style="padding:16px 18px;background:#f6f1ea;border-left:3px solid #bf9a5e;font-size:15px;line-height:1.6;color:#1d1915;white-space:pre-wrap">' . $e($message) . '</div>'
         : '';
 
     $buttons = '';
-    if (!empty($lines['Email'])) {
+    if ($forTeam && !empty($lines['Email'])) {
         $buttons .= '<a href="mailto:' . $e($lines['Email']) . '?subject=' . rawurlencode('Re: your Trend Events request') . '" style="display:inline-block;margin:0 8px 8px 0;background:#bf9a5e;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:3px;font-size:12px;letter-spacing:2px;text-transform:uppercase">Reply to client</a>';
     }
-    if (!empty($lines['Phone'])) {
+    if ($forTeam && !empty($lines['Phone'])) {
         $buttons .= '<a href="tel:' . $e(preg_replace('/[^0-9+]/', '', $lines['Phone'])) . '" style="display:inline-block;margin:0 8px 8px 0;border:1px solid #bf9a5e;color:#a8834a;text-decoration:none;padding:12px 22px;border-radius:3px;font-size:12px;letter-spacing:2px;text-transform:uppercase">Call</a>';
     }
 
@@ -171,12 +171,16 @@ function request_email_html(string $subject, array $lines): string
         . '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:8px;overflow:hidden">'
         . '<tr><td style="background:#0f0d0b;padding:20px 28px;color:#c9a566;font-family:Georgia,serif;font-size:20px;letter-spacing:3px">TREND EVENTS</td></tr>'
         . '<tr><td style="padding:28px">'
-        . '<p style="margin:0 0 4px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a8834a">New request</p>'
-        . '<h1 style="margin:0 0 22px;font-family:Georgia,serif;font-weight:normal;font-size:24px;line-height:1.3">' . $e($subject) . '</h1>'
+        . '<p style="margin:0 0 4px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a8834a">' . ($forTeam ? 'New request' : 'Request received') . '</p>'
+        . '<h1 style="margin:0 0 ' . ($forTeam ? '22' : '10') . 'px;font-family:Georgia,serif;font-weight:normal;font-size:24px;line-height:1.3">' . $e($subject) . '</h1>'
+        . ($forTeam ? '' : '<p style="margin:0 0 22px;font-size:15px;line-height:1.6;color:#5b544c">We have received your request and one of our planners will get back to you within 24 hours. Here is a copy of what you sent us:</p>')
         . '<table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee5d8">' . $rows . '</table>'
         . $messageBlock
         . ($buttons ? '<div style="margin-top:26px">' . $buttons . '</div>' : '')
-        . '<p style="margin:22px 0 0;font-size:12px;color:#8a8279">Received ' . $e(date('j M Y, H:i')) . ' · also saved in phpMyAdmin → quote_requests</p>'
+        . ($forTeam
+            ? '<p style="margin:22px 0 0;font-size:12px;color:#8a8279">Received ' . $e(date('j M Y, H:i')) . ' · also saved in phpMyAdmin → quote_requests</p>'
+            : '<p style="margin:26px 0 0;font-size:14px;line-height:1.6;color:#5b544c">Questions? Just reply to this email or call us on <a href="tel:' . $e(preg_replace('/[^0-9+]/', '', cfg('CONTACT_PHONE', '+44 7308 214398'))) . '" style="color:#a8834a">' . $e(cfg('CONTACT_PHONE', '+44 7308 214398')) . '</a>.</p>'
+              . '<p style="margin:14px 0 0;font-size:12px;color:#8a8279">Trend Events · London, United Kingdom · <a href="https://www.instagram.com/trendevents.uk/" style="color:#a8834a">@trendevents.uk</a></p>')
         . '</td></tr></table></td></tr></table></body></html>';
 }
 
@@ -301,7 +305,8 @@ function email_html(string $title, string $intro, string $buttonText, string $ur
 }
 
 // Saves a quote request and emails the team; returns the new id
-function save_quote(array $contact, array $fields, string $source): int
+// $services / $emailMessage: Build Your Event shows the chosen services as their own row in the emails
+function save_quote(array $contact, array $fields, string $source, string $services = '', ?string $emailMessage = null): int
 {
     $data = $contact + $fields + ['source' => $source, 'user_id' => current_user_id(), 'ip_address' => client_ip()];
     $cols = array_keys($data);
@@ -325,15 +330,41 @@ function save_quote(array $contact, array $fields, string $source): int
     $pages = ['quote_form' => 'Get a Quote', 'venue_page' => 'Check Availability', 'package_page' => 'Package quote',
         'service_page' => 'Service quote', 'build_page' => 'Build Your Event', 'homepage_search' => 'Homepage search'];
     $summary['source'] = $pages[$summary['source']] ?? $summary['source'];
-    notify(($summary['event_type'] ? $summary['event_type'] . ' request' : 'New request') . " #$id — " . $contact['full_name'], array_filter([
+    $lines = array_filter([
         'Full name' => $summary['full_name'], 'Email' => $summary['email'], 'Phone' => $summary['phone'],
         'Event type' => $summary['event_type'],
         'Event date' => $summary['event_date'] ? date('j F Y', strtotime($summary['event_date'])) : null,
         'Guests' => $summary['guests'],
-        'City' => $summary['city'], 'Venue' => $summary['venue'], 'Package' => $summary['package'],
-        'Service' => $summary['service'], 'Message' => $summary['message'], 'From page' => $summary['source'],
-    ]));
+        'Location' => $source === 'build_page' ? ($summary['city'] ?? 'Any') : $summary['city'],
+        'Venue' => $source === 'build_page' ? ($summary['venue'] ?? 'To be suggested') : $summary['venue'],
+        'Package' => $summary['package'], 'Service' => $summary['service'],
+        'Services' => $services ?: null,
+        'Message' => $source === 'build_page' ? $emailMessage : $summary['message'],
+        'From page' => $summary['source'],
+    ]);
+    $title = ($summary['event_type'] ? $summary['event_type'] . ' request' : 'New request') . " #$id";
+    notify("$title — " . $contact['full_name'], $lines);
+    confirm_to_client($contact, $title, $lines);
     return $id;
+}
+
+// "Thank you" copy for the client, with everything they sent us
+function confirm_to_client(array $contact, string $title, array $lines): void
+{
+    if (!cfg('CONFIRM_TO_CLIENT', true)) return;
+    unset($lines['From page']);
+    $first = explode(' ', $contact['full_name'])[0];
+    $text = "Hi $first,\n\nThank you for contacting Trend Events. We have received your request and one of our planners "
+        . "will get back to you within 24 hours.\n\nYour request:\n"
+        . implode("\n", array_map(fn ($k, $v) => "$k: $v", array_keys($lines), $lines))
+        . "\n\nQuestions? Reply to this email or call " . cfg('CONTACT_PHONE', '+44 7308 214398') . ".\n\nTrend Events";
+    send_mail(
+        $contact['email'],
+        "We've received your request — Trend Events",
+        $text,
+        request_email_html("Thank you, $first", $lines, false),
+        NOTIFY_EMAIL ?: null
+    );
 }
 
 // ---------- sessions & auth ----------
