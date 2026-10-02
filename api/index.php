@@ -334,8 +334,10 @@ function post_build(): void
             'SELECT name FROM services WHERE id IN (' . implode(',', array_fill(0, count($services), '?')) . ') ORDER BY sort_order',
             array_keys($services)
         ), 'name')) : '';
-        $message = trim((str($b['message'] ?? null, 5000) ?? '') . ($names ? "\n\nServices: $names" : ''));
-        $quoteId = save_quote($contact, $fields + ['message' => $message ?: null], 'build_page');
+        $userMessage = str($b['message'] ?? null, 5000);
+        // phpMyAdmin keeps the services in the message too; the emails show them as their own row
+        $message = trim(($userMessage ?? '') . ($names ? "\n\nServices: $names" : ''));
+        $quoteId = save_quote($contact, $fields + ['message' => $message ?: null], 'build_page', $names, $userMessage);
     }
     $buildId = run(
         'INSERT INTO event_builds (user_id, quote_request_id, event_type_id, city_id, event_date, guest_range_id, venue_id, `status`)

@@ -17,6 +17,7 @@ export default function Quote() {
   const pkg = PACKAGES.find((p) => slug(p.name) === params.get('package'))
   const service = [...FEATURED_SERVICES, ...ALL_SERVICES].find((s) => slug(s.name) === params.get('service'))
   const [sent, setSent] = useState(false)
+  const fromBuild = params.get('from') === 'build'
 
   const [form, setForm] = useState({
     name: '',
@@ -48,7 +49,7 @@ export default function Quote() {
     }
 
     let result
-    if (params.get('from') === 'build') {
+    if (fromBuild) {
       // Build Your Event → saves the plan + chosen services and creates the quote request
       result = await apiPost('build', {
         ...contact,
@@ -103,9 +104,11 @@ export default function Quote() {
             </div>
           ) : (
             <form className="card quote__form" onSubmit={submit}>
-              {(venue || pkg || service || plan.services.length > 0) && (
+              {(fromBuild || venue || pkg || service || plan.services.length > 0) && (
                 <div className="quote__context">
+                  {fromBuild && plan.location && <p><strong>Location:</strong> {plan.location}</p>}
                   {venue && <p><strong>Venue:</strong> {venue.name}, {venue.location}</p>}
+                  {fromBuild && !venue && <p><strong>Venue:</strong> To be suggested</p>}
                   {pkg && <p><strong>Package:</strong> {pkg.name}</p>}
                   {service && <p><strong>Service:</strong> {service.name}</p>}
                   {plan.services.length > 0 && <p><strong>Services:</strong> {plan.services.join(', ')}</p>}
