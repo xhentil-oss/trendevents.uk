@@ -128,7 +128,56 @@ function notify(string $subject, array $lines): void
 {
     if (NOTIFY_EMAIL === '') return;
     $text = implode("\n", array_map(fn ($k, $v) => "$k: $v", array_keys($lines), $lines));
-    send_mail(NOTIFY_EMAIL, $subject, $text, null, $lines['Email'] ?? null);
+    send_mail(NOTIFY_EMAIL, $subject, $text, request_email_html($subject, $lines), $lines['Email'] ?? null);
+}
+
+// The team's copy of a request: every form field in a table, plus reply / call buttons
+function request_email_html(string $subject, array $lines): string
+{
+    $e = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+    $message = $lines['Message'] ?? null;
+    unset($lines['Message']);
+
+    $rows = '';
+    foreach ($lines as $label => $value) {
+        if ($label === 'Email') {
+            $value = '<a href="mailto:' . $e($value) . '" style="color:#a8834a">' . $e($value) . '</a>';
+        } elseif ($label === 'Phone') {
+            $value = '<a href="tel:' . $e(preg_replace('/[^0-9+]/', '', $value)) . '" style="color:#a8834a">' . $e($value) . '</a>';
+        } else {
+            $value = $e($value);
+        }
+        $rows .= '<tr>'
+            . '<td style="padding:11px 14px;border-bottom:1px solid #eee5d8;width:130px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8a8279;vertical-align:top">' . $e($label) . '</td>'
+            . '<td style="padding:11px 14px;border-bottom:1px solid #eee5d8;font-size:15px;color:#1d1915">' . $value . '</td>'
+            . '</tr>';
+    }
+
+    $messageBlock = $message
+        ? '<p style="margin:26px 0 8px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8a8279">Tell us about your event</p>'
+          . '<div style="padding:16px 18px;background:#f6f1ea;border-left:3px solid #bf9a5e;font-size:15px;line-height:1.6;color:#1d1915;white-space:pre-wrap">' . $e($message) . '</div>'
+        : '';
+
+    $buttons = '';
+    if (!empty($lines['Email'])) {
+        $buttons .= '<a href="mailto:' . $e($lines['Email']) . '?subject=' . rawurlencode('Re: your Trend Events request') . '" style="display:inline-block;margin:0 8px 8px 0;background:#bf9a5e;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:3px;font-size:12px;letter-spacing:2px;text-transform:uppercase">Reply to client</a>';
+    }
+    if (!empty($lines['Phone'])) {
+        $buttons .= '<a href="tel:' . $e(preg_replace('/[^0-9+]/', '', $lines['Phone'])) . '" style="display:inline-block;margin:0 8px 8px 0;border:1px solid #bf9a5e;color:#a8834a;text-decoration:none;padding:12px 22px;border-radius:3px;font-size:12px;letter-spacing:2px;text-transform:uppercase">Call</a>';
+    }
+
+    return '<!doctype html><html><body style="margin:0;background:#f6f1ea;font-family:Helvetica,Arial,sans-serif;color:#1d1915">'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="padding:28px 12px"><tr><td align="center">'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background:#ffffff;border-radius:8px;overflow:hidden">'
+        . '<tr><td style="background:#0f0d0b;padding:20px 28px;color:#c9a566;font-family:Georgia,serif;font-size:20px;letter-spacing:3px">TREND EVENTS</td></tr>'
+        . '<tr><td style="padding:28px">'
+        . '<p style="margin:0 0 4px;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#a8834a">New request</p>'
+        . '<h1 style="margin:0 0 22px;font-family:Georgia,serif;font-weight:normal;font-size:24px;line-height:1.3">' . $e($subject) . '</h1>'
+        . '<table width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #eee5d8">' . $rows . '</table>'
+        . $messageBlock
+        . ($buttons ? '<div style="margin-top:26px">' . $buttons . '</div>' : '')
+        . '<p style="margin:22px 0 0;font-size:12px;color:#8a8279">Received ' . $e(date('j M Y, H:i')) . ' · also saved in phpMyAdmin → quote_requests</p>'
+        . '</td></tr></table></td></tr></table></body></html>';
 }
 
 // ---------- email ----------
@@ -273,9 +322,14 @@ function save_quote(array $contact, array $fields, string $source): int
          WHERE q.id = ?',
         [$id]
     );
-    notify("New request #$id (" . str_replace('_', ' ', $source) . ') — ' . $contact['full_name'], array_filter([
-        'Name' => $summary['full_name'], 'Email' => $summary['email'], 'Phone' => $summary['phone'],
-        'Event' => $summary['event_type'], 'Date' => $summary['event_date'], 'Guests' => $summary['guests'],
+    $pages = ['quote_form' => 'Get a Quote', 'venue_page' => 'Check Availability', 'package_page' => 'Package quote',
+        'service_page' => 'Service quote', 'build_page' => 'Build Your Event', 'homepage_search' => 'Homepage search'];
+    $summary['source'] = $pages[$summary['source']] ?? $summary['source'];
+    notify(($summary['event_type'] ? $summary['event_type'] . ' request' : 'New request') . " #$id — " . $contact['full_name'], array_filter([
+        'Full name' => $summary['full_name'], 'Email' => $summary['email'], 'Phone' => $summary['phone'],
+        'Event type' => $summary['event_type'],
+        'Event date' => $summary['event_date'] ? date('j F Y', strtotime($summary['event_date'])) : null,
+        'Guests' => $summary['guests'],
         'City' => $summary['city'], 'Venue' => $summary['venue'], 'Package' => $summary['package'],
         'Service' => $summary['service'], 'Message' => $summary['message'], 'From page' => $summary['source'],
     ]));
