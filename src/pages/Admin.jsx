@@ -36,11 +36,13 @@ function StatusBadge({ status }) {
 
 // Loads an admin endpoint; returns [data, error, reload]
 function useAdminData(path) {
+  const { sessionExpired } = useStore()
   const [state, setState] = useState({ data: null, error: null })
   const load = useCallback(async () => {
     const r = await api(path)
+    if (r.status === 401) return sessionExpired() // back to the sign-in screen
     setState(r.ok ? { data: r.data, error: null } : { data: null, error: r.error })
-  }, [path])
+  }, [path, sessionExpired])
   useEffect(() => {
     load()
   }, [load])
@@ -307,6 +309,7 @@ function Requests({ openRequest, version }) {
 }
 
 function RequestDrawer({ id, onClose, onChanged }) {
+  const { sessionExpired } = useStore()
   const [r, setR] = useState(null)
   const [error, setError] = useState(null)
   const [notes, setNotes] = useState('')
@@ -317,16 +320,18 @@ function RequestDrawer({ id, onClose, onChanged }) {
 
   useEffect(() => {
     api(`admin/requests/${id}`).then((res) => {
+      if (res.status === 401) return sessionExpired()
       if (!res.ok) return setError(res.error)
       setR(res.data)
       setNotes(res.data.admin_notes || '')
     })
-  }, [id])
+  }, [id, sessionExpired])
 
   const update = async (patch) => {
     setSaving(true)
     const res = await apiPost(`admin/requests/${id}`, patch)
     setSaving(false)
+    if (res.status === 401) return sessionExpired()
     if (!res.ok) return setError(res.error)
     setR(res.data)
     setSavedMsg('Saved')
@@ -338,6 +343,7 @@ function RequestDrawer({ id, onClose, onChanged }) {
     setDeleting(true)
     const res = await apiDelete(`admin/requests/${id}`)
     setDeleting(false)
+    if (res.status === 401) return sessionExpired()
     if (!res.ok) {
       setConfirmDelete(false)
       return setError(res.error)

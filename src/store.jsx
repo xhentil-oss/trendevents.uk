@@ -76,6 +76,9 @@ export function StoreProvider({ children }) {
     setOnline(await syncSaved())
   }
 
+  // The server says the login is gone (e.g. expired) — show the signed-out state
+  const sessionExpired = useCallback(() => setUser(null), [])
+
   const signOut = async () => {
     await apiPost('logout', {})
     setUser(null)
@@ -95,7 +98,7 @@ export function StoreProvider({ children }) {
 
   return (
     <StoreContext.Provider
-      value={{ user, signedIn, signOut, saved, toggleSaved, plan, updatePlan, toggleService, resetPlan }}
+      value={{ user, signedIn, signOut, sessionExpired, saved, toggleSaved, plan, updatePlan, toggleService, resetPlan }}
     >
       {children}
     </StoreContext.Provider>

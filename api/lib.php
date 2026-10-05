@@ -372,8 +372,15 @@ function confirm_to_client(array $contact, string $title, array $lines): void
 function start_session(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) return;
+    $lifetime = 60 * 60 * 24 * 30;
+    // The hosting default deletes sessions after 24 minutes of inactivity. Keep ours in a private
+    // folder outside public_html (e.g. /home/trendevents/trend_sessions) so they last 30 days.
+    $dir = cfg('SESSION_DIR', dirname(__DIR__, 2) . '/trend_sessions');
+    if (!is_dir($dir)) @mkdir($dir, 0700, true);
+    if (is_dir($dir) && is_writable($dir)) session_save_path($dir);
+    ini_set('session.gc_maxlifetime', (string) $lifetime);
     session_set_cookie_params([
-        'lifetime' => 60 * 60 * 24 * 30,
+        'lifetime' => $lifetime,
         'path' => '/',
         'secure' => !empty($_SERVER['HTTPS']),
         'httponly' => true,

@@ -40,6 +40,7 @@ export async function api(path, { method = 'GET', body } = {}) {
       ok: false,
       error: data?.error || `Something went wrong (${res.status}). Please try again.`,
       fields: data?.fields || {},
+      status: res.status,
     }
   } catch {
     return {
