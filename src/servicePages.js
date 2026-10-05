@@ -75,6 +75,8 @@ export const SERVICE_PAGES = {
       'Our team handles content playback, live switching and timing, so every visual appears exactly when it should.',
     ],
     includes: ['Indoor & outdoor LED walls', 'Custom sizes & shapes', 'Live camera feeds', 'Presentation & video playback', 'Custom visual content', 'Screen operators on site'],
+    hero: S('led-hero'),
+    heroPosition: 'center 55%',
     gallery: [S('led-screens'), S('led-screens-2'), S('led-screens-3'), S('led-screens-4')],
   },
   stages: {

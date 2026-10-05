@@ -18,7 +18,7 @@ export default function ServiceDetail() {
 
   return (
     <>
-      <PageHero image={page.gallery[0]} eyebrow="Our services" title={service.name} italic={page.tagline}>
+      <PageHero image={page.hero || page.gallery[0]} position={page.heroPosition} eyebrow="Our services" title={service.name} italic={page.tagline}>
         <Link to={`/quote?service=${key}`} className="btn btn--gold">
           Get a Quote <ArrowRight size={16} />
         </Link>
