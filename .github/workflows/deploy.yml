@@ -38,7 +38,7 @@ jobs:
         run: |
           mkdir -p out/site/api
           cp -r dist/. out/site/
-          cp api/index.php api/lib.php api/.htaccess out/site/api/
+          cp api/index.php api/lib.php api/admin.php api/.htaccess out/site/api/
           cat > out/.cpanel.yml <<'EOF'
           ---
           deployment:

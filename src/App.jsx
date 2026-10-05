@@ -16,6 +16,7 @@ import Quote from './pages/Quote'
 import { Account, ResetPassword, Saved } from './pages/Misc'
 import NotFound from './pages/NotFound'
 import SearchResults from './pages/SearchResults'
+import Admin from './pages/Admin'
 
 // Scroll to the #anchor if there is one, otherwise to the top on page change
 function ScrollManager() {
@@ -42,6 +43,10 @@ function ScrollManager() {
 }
 
 export default function App() {
+  const { pathname } = useLocation()
+  // The admin dashboard has its own layout (no site header/footer)
+  if (pathname.startsWith('/admin')) return <Admin />
+
   return (
     <>
       <ScrollManager />

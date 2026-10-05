@@ -135,3 +135,14 @@ Saved venues: guests are identified by a random `X-Device-Token` (stored in the 
 
 **Local development:** the Vite dev server has no PHP, so forms show "We could not reach the server". To test against the live API run:
 `API_PROXY=https://trendevents.uk npm run dev` (in PowerShell: `$env:API_PROXY="https://trendevents.uk"; npm run dev`).
+
+## Admin dashboard (`/admin`)
+
+`https://trendevents.uk/admin` — sign in with an account whose `role` is `admin`:
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'you@example.com';
+```
+Tabs: Overview (stats, latest requests, next events), Requests (filter, search, details, status, internal notes, delete, CSV export), Events (requests with an event date, by month), Users (role, block/unblock), Saved venues.
+
+Routes (`api/admin.php`, all require an admin session — 401 / 403 otherwise):
+`GET admin/stats` · `GET admin/requests?status=&source=&q=&page=` · `GET admin/requests/{id}` · `POST admin/requests/{id}` `{status, admin_notes}` · `DELETE admin/requests/{id}` · `GET admin/export` (CSV, same filters) · `GET admin/events[?past=1]` · `GET admin/users` · `POST admin/users/{id}` `{role, is_active}` · `GET admin/saved`

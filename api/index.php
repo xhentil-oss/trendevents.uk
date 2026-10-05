@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/config.php';
 require __DIR__ . '/lib.php';
+require __DIR__ . '/admin.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -28,6 +29,17 @@ $path = trim(preg_replace('#^.*?/api/?#', '', parse_url($_SERVER['REQUEST_URI'],
 $parts = $path === '' ? [] : explode('/', $path);
 $route = $parts[0] ?? '';
 $param = isset($parts[1]) ? urldecode($parts[1]) : null;
+$param2 = isset($parts[2]) ? urldecode($parts[2]) : null;
+
+// Admin dashboard API (role = admin)
+if ($route === 'admin') {
+    try {
+        admin_route($method, $param, $param2);
+    } catch (Throwable $e) {
+        error_log('Trend admin API error: ' . $e->getMessage());
+        fail(500, DEBUG ? $e->getMessage() : 'Server error');
+    }
+}
 
 try {
     switch ("$method $route") {
