@@ -26,6 +26,8 @@ const TABS = [
 const fmtDate = (d) => (d ? new Date(d.replace(' ', 'T')).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
 const fmtDateTime = (d) =>
   d ? new Date(d.replace(' ', 'T')).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'
+// Message without the "Services: …" line that Build Your Event adds (shown separately)
+const userMessage = (m) => (m || '').replace(/\n*Services: .*$/s, '').trim()
 const daysUntil = (d) => Math.round((new Date(d) - new Date(new Date().toDateString())) / 86400000)
 
 function StatusBadge({ status }) {
@@ -240,6 +242,7 @@ function Requests({ openRequest, version }) {
                 <th>Event date</th>
                 <th>Guests</th>
                 <th>Venue / City</th>
+                <th>Details</th>
                 <th>From</th>
                 <th>Status</th>
               </tr>
@@ -252,11 +255,23 @@ function Requests({ openRequest, version }) {
                   <td>
                     <strong>{r.full_name}</strong>
                     <span>{r.email}</span>
+                    {r.phone && <span>{r.phone}</span>}
                   </td>
                   <td>{r.event_type || '—'}</td>
                   <td>{fmtDate(r.event_date)}</td>
                   <td>{r.guests || '—'}</td>
-                  <td>{r.venue || r.city || '—'}</td>
+                  <td>
+                    {r.venue || r.city || '—'}
+                    {r.venue && r.city && <span>{r.city}</span>}
+                  </td>
+                  <td className="adm-details">
+                    {r.package && <span>Package: {r.package}</span>}
+                    {r.service && <span>Service: {r.service}</span>}
+                    {r.services_list && <span>Services: {r.services_list}</span>}
+                    {userMessage(r.message) && <em>“{userMessage(r.message)}”</em>}
+                    {r.admin_notes && <span className="adm-note">📝 {r.admin_notes}</span>}
+                    {!r.package && !r.service && !r.services_list && !userMessage(r.message) && !r.admin_notes && '—'}
+                  </td>
                   <td>{r.source_label}</td>
                   <td>
                     <StatusBadge status={r.status} />
@@ -265,7 +280,7 @@ function Requests({ openRequest, version }) {
               ))}
               {!data.rows.length && (
                 <tr>
-                  <td colSpan={9} className="adm-muted">
+                  <td colSpan={10} className="adm-muted">
                     No requests match these filters.
                   </td>
                 </tr>
@@ -297,6 +312,8 @@ function RequestDrawer({ id, onClose, onChanged }) {
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedMsg, setSavedMsg] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     api(`admin/requests/${id}`).then((res) => {
@@ -318,9 +335,13 @@ function RequestDrawer({ id, onClose, onChanged }) {
   }
 
   const remove = async () => {
-    if (!window.confirm(`Delete request #${id} from ${r.full_name}? This cannot be undone.`)) return
+    setDeleting(true)
     const res = await apiDelete(`admin/requests/${id}`)
-    if (!res.ok) return setError(res.error)
+    setDeleting(false)
+    if (!res.ok) {
+      setConfirmDelete(false)
+      return setError(res.error)
+    }
     onChanged()
     onClose()
   }
@@ -399,13 +420,27 @@ function RequestDrawer({ id, onClose, onChanged }) {
                 {saving ? 'Saving…' : 'Save notes'}
               </button>
               {savedMsg && <span className="adm-ok">{savedMsg} ✓</span>}
-              <a className="btn btn--outline btn--sm" href={`mailto:${r.email}?subject=${encodeURIComponent('Your Trend Events request')}`}>
-                <Mail size={14} /> Reply
-              </a>
-              <button className="adm-danger" onClick={remove}>
-                <Trash2 size={14} /> Delete
-              </button>
+              {!confirmDelete && (
+                <button className="adm-danger" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 size={14} /> Delete
+                </button>
+              )}
             </div>
+            {confirmDelete && (
+              <div className="adm-confirm" role="alertdialog">
+                <p>
+                  Delete request #{r.id} from <strong>{r.full_name}</strong>? This cannot be undone.
+                </p>
+                <div>
+                  <button className="adm-confirm__yes" disabled={deleting} onClick={remove}>
+                    <Trash2 size={14} /> {deleting ? 'Deleting…' : 'Yes, delete'}
+                  </button>
+                  <button className="btn btn--ghost btn--sm" disabled={deleting} onClick={() => setConfirmDelete(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </aside>
