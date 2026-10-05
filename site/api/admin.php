@@ -31,8 +31,7 @@ function admin_route(string $method, ?string $section, ?string $id): void
         case 'POST requests':
             admin_update_request((int) $id);
         case 'DELETE requests':
-            run('DELETE FROM quote_requests WHERE id = ?', [(int) $id]);
-            send(200, ['ok' => true]);
+            admin_delete_request((int) $id);
         case 'GET export':
             admin_export();
         case 'GET events':
@@ -53,7 +52,10 @@ function request_select(): string
     return "SELECT q.id, q.created_at, q.`status`, q.source, q.full_name, q.email, q.phone, q.event_date, q.message,
                    q.admin_notes, q.user_id, et.form_label event_type, gr.label guests, c.name city,
                    v.name venue, v.slug venue_slug, p.name package, s.name service,
-                   (SELECT b.id FROM event_builds b WHERE b.quote_request_id = q.id LIMIT 1) build_id
+                   (SELECT b.id FROM event_builds b WHERE b.quote_request_id = q.id LIMIT 1) build_id,
+                   (SELECT GROUP_CONCAT(sv.name ORDER BY sv.sort_order SEPARATOR ', ')
+                      FROM event_builds b2 JOIN event_build_services x ON x.event_build_id = b2.id JOIN services sv ON sv.id = x.service_id
+                     WHERE b2.quote_request_id = q.id) services_list
             FROM quote_requests q
             LEFT JOIN event_types et ON et.id = q.event_type_id
             LEFT JOIN guest_ranges gr ON gr.id = q.guest_range_id
@@ -236,4 +238,16 @@ function admin_saved(): void
              ORDER BY s.created_at DESC LIMIT 30'
         ),
     ]);
+}
+
+// Deletes the request and its Build Your Event plan (chosen services go with it via ON DELETE CASCADE)
+function admin_delete_request(int $id): void
+{
+    if (!one('SELECT id FROM quote_requests WHERE id = ?', [$id])) fail(404, 'Request not found');
+    $pdo = db();
+    $pdo->beginTransaction();
+    run('DELETE FROM event_builds WHERE quote_request_id = ?', [$id]);
+    run('DELETE FROM quote_requests WHERE id = ?', [$id]);
+    $pdo->commit();
+    send(200, ['ok' => true]);
 }
