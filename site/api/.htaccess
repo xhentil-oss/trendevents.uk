@@ -4,7 +4,7 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule ^ index.php [QSA,L]
 
 # Never serve the config or helper files directly
-<FilesMatch "^(config|config\.example|lib)\.php$|\.md$">
+<FilesMatch "^(config|config\.example|lib|admin)\.php$|\.md$">
   Require all denied
 </FilesMatch>
 
