@@ -46,7 +46,12 @@ export default function Footer() {
       </div>
       <div className="container footer__bottom">
         <span>© {new Date().getFullYear()} Trend Events. All rights reserved.</span>
-        <span>Privacy · Terms</span>
+        <span>
+          Copyright by{' '}
+          <a href="https://bos.al/" target="_blank" rel="noopener noreferrer" className="footer__credit">
+            bos.al
+          </a>
+        </span>
       </div>
     </footer>
   )

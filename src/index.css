@@ -2675,3 +2675,9 @@ p {
   color: inherit;
   font-weight: 500;
 }
+
+.footer__credit {
+  color: var(--gold-soft);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
