@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Building, CalendarDays, Camera, Download, Gift, Heart, Inbox, LayoutDashboard, LogOut, Mail, Phone, RefreshCw, Search,
-  Settings, Sparkles, Trash2, Users, WandSparkles, X,
+  Settings, Sparkles, Trash2, TrendingUp, Users, WandSparkles, X,
 } from 'lucide-react'
 import { api, apiDelete, apiPost } from '../api'
 import { ContentSection, SettingsSection } from './AdminContent'
@@ -23,6 +23,7 @@ const TABS = [
   { id: 'events', label: 'Events', icon: CalendarDays },
   { id: 'users', label: 'Users', icon: Users },
   { id: 'saved', label: 'Saved venues', icon: Heart },
+  { id: 'searches', label: 'Searches', icon: TrendingUp },
 ]
 // Website content (edited in AdminContent.jsx)
 const CONTENT_TABS = [
@@ -636,6 +637,133 @@ function SavedTab() {
   )
 }
 
+// ---------------------------------------------------------------- search statistics
+
+function Bars({ title, rows, label = (r) => r.label }) {
+  const max = Math.max(1, ...rows.map((r) => +r.n))
+  return (
+    <section className="adm-panel">
+      <h3>{title}</h3>
+      {rows.length ? (
+        rows.map((r, i) => (
+          <div key={i} className="adm-bar">
+            <span>{label(r)}</span>
+            <div>
+              <i style={{ width: `${(r.n / max) * 100}%` }} />
+            </div>
+            <b>{r.n}</b>
+          </div>
+        ))
+      ) : (
+        <p className="adm-muted">No data yet.</p>
+      )}
+    </section>
+  )
+}
+
+function SearchesTab() {
+  const [days, setDays] = useState(30)
+  const [d, error] = useAdminData(`admin/searches?days=${days}`)
+  const monthName = (m) => new Date(`${m}-01`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+  const top = d?.combos?.[0]
+  return (
+    <>
+      <div className="adm-head">
+        <h2>Searches</h2>
+        <div className="adm-toggle">
+          {[
+            [7, '7 days'],
+            [30, '30 days'],
+            [90, '90 days'],
+            [0, 'All time'],
+          ].map(([v, l]) => (
+            <button key={v} className={days === v ? 'is-on' : ''} onClick={() => setDays(v)}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="adm-muted">What visitors look for in the search bar on the Home and Services pages.</p>
+      {error && <p className="form-error">{error}</p>}
+      {!d && !error && <p className="adm-muted">Loading…</p>}
+      {d && (
+        <>
+          <div className="adm-cards">
+            <div className="adm-card">
+              <span>Searches</span>
+              <strong>{d.total}</strong>
+              <em>{days ? `last ${days} days` : 'all time'}</em>
+            </div>
+            <div className="adm-card">
+              <span>Visitors</span>
+              <strong>{d.visitors}</strong>
+              <em>different devices</em>
+            </div>
+            {top && (
+              <div className="adm-card adm-card--wide">
+                <span>Most searched</span>
+                <strong className="adm-card__text">
+                  {[top.event_type || 'Any event', top.city || 'any city', top.guests || 'any size'].join(' · ')}
+                </strong>
+                <em>{top.n} searches</em>
+              </div>
+            )}
+          </div>
+          <div className="adm-grid2">
+            <Bars title="Event types" rows={d.event_types} />
+            <Bars title="Cities" rows={d.cities} />
+            <Bars title="Number of guests" rows={d.guests} />
+            <Bars title="Event month (date chosen)" rows={d.months} label={(r) => monthName(r.month)} />
+          </div>
+          <section className="adm-panel adm-mt">
+            <h3>Top combinations</h3>
+            <Bars
+              title=""
+              rows={d.combos}
+              label={(r) => [r.event_type || 'Any event', r.city || 'any city', r.guests || 'any size'].join(' · ')}
+            />
+          </section>
+          <section className="adm-panel adm-mt">
+            <h3>Latest searches</h3>
+            {d.recent.length ? (
+              <div className="adm-table-wrap adm-table-wrap--flat">
+                <table className="adm-table adm-table--static">
+                  <thead>
+                    <tr>
+                      <th>When</th>
+                      <th>Event</th>
+                      <th>City</th>
+                      <th>Date</th>
+                      <th>Guests</th>
+                      <th>Page</th>
+                      <th>Visitor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.recent.map((r, i) => (
+                      <tr key={i}>
+                        <td>{fmtDateTime(r.created_at)}</td>
+                        <td>{r.event_type || '—'}</td>
+                        <td>{r.city || '—'}</td>
+                        <td>{r.event_date ? fmtDate(r.event_date) : '—'}</td>
+                        <td>{r.guests || '—'}</td>
+                        <td>{r.page === '/' ? 'Home' : r.page || '—'}</td>
+                        <td>{r.full_name || 'Guest'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="adm-muted">No searches yet.</p>
+            )}
+          </section>
+        </>
+      )}
+    </>
+  )
+}
+
 // ---------------------------------------------------------------- shell
 
 export default function Admin() {
@@ -711,6 +839,7 @@ export default function Admin() {
         {tab === 'events' && <Events openRequest={setOpenId} version={version} />}
         {tab === 'users' && <UsersTab me={user} />}
         {tab === 'saved' && <SavedTab />}
+        {tab === 'searches' && <SearchesTab />}
         {['venues', 'packages', 'event-types', 'services', 'portfolio'].includes(tab) && <ContentSection id={tab} key={tab} />}
         {tab === 'settings' && <SettingsSection />}
       </main>

@@ -156,7 +156,7 @@ sql(`-- =====================================================================
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
-DROP TABLE IF EXISTS password_resets, event_build_services, event_builds, quote_requests, saved_venues, users,
+DROP TABLE IF EXISTS searches, password_resets, event_build_services, event_builds, quote_requests, saved_venues, users,
   portfolio_images, portfolio_items, package_items, packages, venue_images, venue_category_map,
   venues, venue_categories, service_images, service_features, services, service_categories,
   event_type_features, event_types, guest_ranges, cities, site_settings;
@@ -455,6 +455,27 @@ CREATE TABLE password_resets (
   UNIQUE KEY uq_pr_token (token_hash),
   KEY idx_pr_user (user_id, created_at),
   CONSTRAINT fk_pr_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ${T}
+
+-- Search bar statistics (Home / Services) — shown in the admin panel
+CREATE TABLE searches (
+  id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  event_type_id  INT UNSIGNED NULL,
+  city_id        INT UNSIGNED NULL,
+  event_date     DATE NULL,
+  guest_range_id INT UNSIGNED NULL,
+  page           VARCHAR(40) NULL,
+  user_id        INT UNSIGNED NULL,
+  device_token   VARCHAR(64) NULL,
+  ip_address     VARCHAR(45) NULL,
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_searches_created (created_at),
+  KEY idx_searches_ip (ip_address, created_at),
+  CONSTRAINT fk_s_event_type FOREIGN KEY (event_type_id) REFERENCES event_types (id) ON DELETE SET NULL,
+  CONSTRAINT fk_s_city FOREIGN KEY (city_id) REFERENCES cities (id) ON DELETE SET NULL,
+  CONSTRAINT fk_s_guests FOREIGN KEY (guest_range_id) REFERENCES guest_ranges (id) ON DELETE SET NULL,
+  CONSTRAINT fk_s_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 ) ${T}
 
 -- 11. SAVED VENUES (♡) — user_id for members, device_token for guests

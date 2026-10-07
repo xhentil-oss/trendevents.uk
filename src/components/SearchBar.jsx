@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, CalendarDays, ChevronDown, MapPin, PartyPopper, Users } from 'lucide-react'
 import { GUEST_OPTIONS, LOCATIONS, SEARCH_EVENT_TYPES } from '../data'
 import { useStore } from '../store'
+import { apiPost } from '../api'
 
 function Field({ icon: IconCmp, label, children }) {
   return (
@@ -32,6 +33,7 @@ function Select({ value, onChange, placeholder, options }) {
 
 export default function SearchBar({ buttonLabel = 'Search Events' }) {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const { updatePlan } = useStore()
   const [form, setForm] = useState({ eventType: '', location: '', date: '', guests: '' })
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }))
@@ -39,6 +41,8 @@ export default function SearchBar({ buttonLabel = 'Search Events' }) {
   const submit = (e) => {
     e.preventDefault()
     updatePlan(form)
+    // search statistics for the admin panel — fire and forget, never delays the visitor
+    apiPost('search-log', { event_type: form.eventType, city: form.location, date: form.date, guests: form.guests, page: pathname })
     const params = new URLSearchParams()
     Object.entries(form).forEach(([k, v]) => v && params.set(k, v))
     navigate(`/venues?${params}`)

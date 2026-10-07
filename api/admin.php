@@ -46,6 +46,8 @@ function admin_route(string $method, ?string $section, ?string $id): void
             admin_update_user((int) $id);
         case 'GET saved':
             admin_saved();
+        case 'GET searches':
+            admin_searches();
     }
     fail(404, 'Not found');
 }

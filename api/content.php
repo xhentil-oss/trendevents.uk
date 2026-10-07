@@ -423,3 +423,92 @@ function admin_save_settings(): void
     }
     admin_settings();
 }
+
+// ============================================================
+//  Search statistics — what visitors look for in the search bar
+// ============================================================
+
+// Created on first use, so the live database needs no manual change
+function ensure_search_table(): void
+{
+    db()->exec(
+        'CREATE TABLE IF NOT EXISTS searches (
+           id             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+           event_type_id  INT UNSIGNED NULL,
+           city_id        INT UNSIGNED NULL,
+           event_date     DATE NULL,
+           guest_range_id INT UNSIGNED NULL,
+           page           VARCHAR(40) NULL,
+           user_id        INT UNSIGNED NULL,
+           device_token   VARCHAR(64) NULL,
+           ip_address     VARCHAR(45) NULL,
+           created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+           PRIMARY KEY (id),
+           KEY idx_searches_created (created_at),
+           KEY idx_searches_ip (ip_address, created_at),
+           CONSTRAINT fk_s_event_type FOREIGN KEY (event_type_id) REFERENCES event_types (id) ON DELETE SET NULL,
+           CONSTRAINT fk_s_city FOREIGN KEY (city_id) REFERENCES cities (id) ON DELETE SET NULL,
+           CONSTRAINT fk_s_guests FOREIGN KEY (guest_range_id) REFERENCES guest_ranges (id) ON DELETE SET NULL,
+           CONSTRAINT fk_s_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+}
+
+// POST /api/search-log { event_type, city, date, guests, page } — silent, never blocks the visitor
+function log_search(): void
+{
+    $b = body();
+    $type = event_type_id($b['event_type'] ?? null);
+    $city = city_id($b['city'] ?? null);
+    $guests = guest_range_id($b['guests'] ?? null);
+    $date = valid_date(str($b['date'] ?? null));
+    if (!$type && !$city && !$guests && !$date) send(200, ['ok' => true]); // empty search: nothing to learn
+
+    ensure_search_table();
+    // max 30 per IP per 10 minutes (protects the statistics from spam)
+    $n = (int) one('SELECT COUNT(*) n FROM searches WHERE ip_address = ? AND created_at > (NOW() - INTERVAL 10 MINUTE)', [client_ip()])['n'];
+    if ($n >= 30) send(200, ['ok' => true]);
+
+    $page = preg_replace('/[^a-z0-9\/-]/', '', strtolower((string) ($b['page'] ?? ''))) ?: null;
+    run(
+        'INSERT INTO searches (event_type_id, city_id, event_date, guest_range_id, page, user_id, device_token, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [$type, $city, $date, $guests, $page ? substr($page, 0, 40) : null, current_user_id(), device_token(), client_ip()]
+    );
+    send(201, ['ok' => true]);
+}
+
+// GET /api/admin/searches?days=30 (0 = all time)
+function admin_searches(): void
+{
+    ensure_search_table();
+    $days = max(0, min(3650, (int) ($_GET['days'] ?? 30)));
+    $where = $days ? "WHERE s.created_at >= (NOW() - INTERVAL $days DAY)" : '';
+    $from = 'FROM searches s
+             LEFT JOIN event_types et ON et.id = s.event_type_id
+             LEFT JOIN cities c ON c.id = s.city_id
+             LEFT JOIN guest_ranges gr ON gr.id = s.guest_range_id';
+    $top = fn (string $label, string $group) => all(
+        // group by the column expressions themselves ("label" would clash with guest_ranges.label)
+        "SELECT $label label, COUNT(*) n $from $where " . ($where ? 'AND' : 'WHERE') . " $group IS NOT NULL GROUP BY $group, $label ORDER BY n DESC LIMIT 10"
+    );
+    send(200, [
+        'days' => $days,
+        'total' => (int) one("SELECT COUNT(*) n $from $where")['n'],
+        'visitors' => (int) one("SELECT COUNT(DISTINCT COALESCE(s.device_token, s.ip_address)) n $from $where")['n'],
+        'event_types' => $top('et.form_label', 's.event_type_id'),
+        'cities' => $top('c.name', 's.city_id'),
+        'guests' => $top('gr.label', 's.guest_range_id'),
+        'months' => all(
+            "SELECT DATE_FORMAT(s.event_date, '%Y-%m') month, COUNT(*) n $from $where " . ($where ? 'AND' : 'WHERE') . "
+             s.event_date IS NOT NULL GROUP BY month ORDER BY month LIMIT 24"
+        ),
+        'combos' => all(
+            "SELECT et.form_label event_type, c.name city, gr.label guests, COUNT(*) n $from $where
+             GROUP BY s.event_type_id, s.city_id, s.guest_range_id, et.form_label, c.name, gr.label ORDER BY n DESC LIMIT 10"
+        ),
+        'recent' => all(
+            "SELECT s.created_at, et.form_label event_type, c.name city, s.event_date, gr.label guests, s.page, u.full_name
+             $from LEFT JOIN users u ON u.id = s.user_id $where ORDER BY s.created_at DESC LIMIT 40"
+        ),
+    ]);
+}

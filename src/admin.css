@@ -979,3 +979,27 @@
     width: 100%;
   }
 }
+
+.adm-card--wide {
+  grid-column: span 2;
+}
+
+.adm-card__text {
+  font-size: 24px !important;
+  line-height: 1.25 !important;
+}
+
+.adm-panel .adm-panel {
+  padding: 0;
+  box-shadow: none;
+}
+
+.adm-table-wrap--flat {
+  box-shadow: none;
+}
+
+@media (max-width: 900px) {
+  .adm-card--wide {
+    grid-column: auto;
+  }
+}
