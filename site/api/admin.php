@@ -23,6 +23,10 @@ function require_admin(): array
 function admin_route(string $method, ?string $section, ?string $id): void
 {
     require_admin();
+    // Website content editing (api/content.php)
+    if (in_array($section, ['upload', 'venues', 'packages', 'portfolio', 'event-types', 'services', 'settings'], true)) {
+        admin_content_route($method, $section, $id);
+    }
     switch ("$method $section") {
         case 'GET stats':
             admin_stats();
