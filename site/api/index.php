@@ -66,6 +66,8 @@ try {
             form_options();
 
         // ------------------------------------------------ requests
+        case 'POST search-log':
+            log_search();
         case 'POST quote':
             post_quote();
         case 'POST availability':
