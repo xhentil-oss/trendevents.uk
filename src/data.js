@@ -1,8 +1,9 @@
-// All site content lives here so it can be edited in one place.
+// Default site content. On the live site src/content.js replaces it with the content
+// from the database (edited in /admin); this copy is the fallback when the API is unavailable.
 
-// Local photos (paths starting with "/", stored in public/) are used as-is; anything else is an Unsplash photo id
+// Site paths ("/images/…", "/uploads/…") and full URLs are used as-is; anything else is an Unsplash photo id
 export const img = (id, w = 1200) =>
-  id.startsWith('/') ? id : `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`
+  !id ? '' : id.startsWith('/') || id.startsWith('http') ? id : `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=75`
 
 export const slug = (s) =>
   s.toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
@@ -386,4 +387,5 @@ export const CONTACT = {
   email: 'Trendeventsuk@gmail.com',
   address: 'London, United Kingdom',
   instagram: 'https://www.instagram.com/trendevents.uk/',
+  hours: 'Mon–Sat, 9:00–19:00',
 }

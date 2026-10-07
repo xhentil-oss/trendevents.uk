@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  ArrowLeft, CalendarDays, Download, Heart, Inbox, LayoutDashboard, LogOut, Mail, Phone, RefreshCw, Search, Trash2, Users, X,
+  ArrowLeft, Building, CalendarDays, Camera, Download, Gift, Heart, Inbox, LayoutDashboard, LogOut, Mail, Phone, RefreshCw, Search,
+  Settings, Sparkles, Trash2, Users, WandSparkles, X,
 } from 'lucide-react'
 import { api, apiDelete, apiPost } from '../api'
+import { ContentSection, SettingsSection } from './AdminContent'
 import { useStore } from '../store'
 import Logo from '../components/Logo'
 import '../admin.css'
@@ -22,6 +24,16 @@ const TABS = [
   { id: 'users', label: 'Users', icon: Users },
   { id: 'saved', label: 'Saved venues', icon: Heart },
 ]
+// Website content (edited in AdminContent.jsx)
+const CONTENT_TABS = [
+  { id: 'venues', label: 'Venues', icon: Building },
+  { id: 'packages', label: 'Packages', icon: Gift },
+  { id: 'event-types', label: 'Event types', icon: Sparkles },
+  { id: 'services', label: 'Services', icon: WandSparkles },
+  { id: 'portfolio', label: 'Our Work', icon: Camera },
+  { id: 'settings', label: 'Settings', icon: Settings },
+]
+const ALL_TABS = [...TABS, ...CONTENT_TABS].map((t) => t.id)
 
 const fmtDate = (d) => (d ? new Date(d.replace(' ', 'T')).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
 const fmtDateTime = (d) =>
@@ -628,7 +640,7 @@ function SavedTab() {
 
 export default function Admin() {
   const { user, signOut } = useStore()
-  const [tab, setTab] = useState(() => (location.hash.slice(1) in { overview: 1, requests: 1, events: 1, users: 1, saved: 1 } ? location.hash.slice(1) : 'overview'))
+  const [tab, setTab] = useState(() => (ALL_TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'overview'))
   const [openId, setOpenId] = useState(null)
   const [version, setVersion] = useState(0) // bump to refresh lists after an edit
 
@@ -676,6 +688,12 @@ export default function Admin() {
               <Icon size={17} /> <span>{label}</span>
             </button>
           ))}
+          <p className="adm-side__group">Website content</p>
+          {CONTENT_TABS.map(({ id, label, icon: Icon }) => (
+            <button key={id} className={tab === id ? 'is-active' : ''} onClick={() => goTo(id)}>
+              <Icon size={17} /> <span>{label}</span>
+            </button>
+          ))}
         </nav>
         <div className="adm-side__foot">
           <span>{user.full_name}</span>
@@ -693,6 +711,8 @@ export default function Admin() {
         {tab === 'events' && <Events openRequest={setOpenId} version={version} />}
         {tab === 'users' && <UsersTab me={user} />}
         {tab === 'saved' && <SavedTab />}
+        {['venues', 'packages', 'event-types', 'services', 'portfolio'].includes(tab) && <ContentSection id={tab} key={tab} />}
+        {tab === 'settings' && <SettingsSection />}
       </main>
       {openId && <RequestDrawer id={openId} onClose={() => setOpenId(null)} onChanged={() => setVersion((v) => v + 1)} />}
     </div>

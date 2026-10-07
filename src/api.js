@@ -53,3 +53,34 @@ export async function api(path, { method = 'GET', body } = {}) {
 
 export const apiPost = (path, body) => api(path, { method: 'POST', body })
 export const apiDelete = (path) => api(path, { method: 'DELETE' })
+
+// Shrinks big photos in the browser (max 2000px, JPEG) so they stay under the server's upload limit
+async function shrink(file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type) || file.size < 1.5 * 1024 * 1024) return file
+  try {
+    const bmp = await createImageBitmap(file)
+    const scale = Math.min(1, 2000 / Math.max(bmp.width, bmp.height))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.round(bmp.width * scale)
+    canvas.height = Math.round(bmp.height * scale)
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height)
+    const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.86))
+    return blob ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file
+  } catch {
+    return file
+  }
+}
+
+// Admin photo upload → { ok, path } or { ok: false, error }
+export async function uploadImage(file) {
+  const form = new FormData()
+  form.append('file', await shrink(file))
+  try {
+    const res = await fetch(`${BASE}/admin/upload`, { method: 'POST', credentials: 'include', body: form })
+    const data = await res.json().catch(() => null)
+    if (res.ok && data?.path) return { ok: true, path: data.path }
+    return { ok: false, error: data?.error || `Upload failed (${res.status})`, status: res.status }
+  } catch {
+    return { ok: false, error: 'Upload failed — check your connection' }
+  }
+}

@@ -8,6 +8,7 @@ declare(strict_types=1);
 require __DIR__ . '/config.php';
 require __DIR__ . '/lib.php';
 require __DIR__ . '/admin.php';
+require __DIR__ . '/content.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -59,6 +60,8 @@ try {
             portfolio_list();
         case 'GET settings':
             send(200, array_column(all('SELECT setting_key, setting_value FROM site_settings'), 'setting_value', 'setting_key'));
+        case 'GET content':
+            public_content();
         case 'GET options':
             form_options();
 

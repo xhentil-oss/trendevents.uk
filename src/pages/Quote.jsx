@@ -186,7 +186,7 @@ export default function Quote() {
             <a href={`mailto:${CONTACT.email}`}><Mail size={16} /> {CONTACT.email}</a>
             <a href={CONTACT.instagram} target="_blank" rel="noopener noreferrer"><SocialIcons.Instagram width="16" height="16" /> @trendevents.uk</a>
             <span><MapPin size={16} /> {CONTACT.address}</span>
-            <span><CalendarDays size={16} /> Mon–Sat, 9:00–19:00</span>
+            <span><CalendarDays size={16} /> {CONTACT.hours}</span>
           </aside>
         </div>
       </section>
